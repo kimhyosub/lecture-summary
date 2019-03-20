@@ -14,7 +14,7 @@
   - 전달 받은 요청 정보를 이용해 로직을 수행하고 결과를 리턴
  * 핸들러 결과 처리
   - 핸들러의 리턴 값으로 웹 응답 생성
-  
+  ```
   @RestController
   public class MyController { 
     @GetMapping("/hello/{name}") // 요청 매핑
@@ -22,15 +22,15 @@
       return "Hello" + name; // 핸들러 실행, 핸들러 결과 처리(응답 생성)
     }
   }
-  
+  ```
   > RouterFunction
    * 함수형 스타일의 요청 매핑
-   
+  ```
   @FunctionalInterface
   public interface RouterFunction<T extends ServerResponse> {
     Mono<HandlerFunction<T>> route<ServerRequest request);
   }
-  
+  ```
   > HandlerFunction
    * 함수형 스타일의 웹 핸들러(컨트롤러 메소드)
    * 웹 요청을 받아 웹 응답을 돌려주는 함수
@@ -77,23 +77,23 @@ RouterFunction router = req -> RequestPredicates.path("/hello/{name}").test(req)
 
 > HandlerFunction과 RouterFunction 조합
  * RouterFunctions.route(predicate, handler)
- 
+ ```
  RouterFunction router = RouterFunctions.route(RequestPredicates.path("/hello/{name}")
    , req ->ServerResponse.ok().body(fromObject("Hello" + req.pathVariable("name"))));
-   
+ ```  
  > RouterFunction의 등록
   * RouterFunction 타입의 @Bean으로 만든다
-  
+ ``` 
  @Bean
  RounterFunction helloPathVarRouter(){
   return route(RequestPredicates.path("/hello/{name}")
    , req ->ServerResponse.ok().body(fromObject("Hello" + req.pathVariable("name"))));
  }
- 
+ ```
 > 핸들러 내부 로직이 복잡하다면 분리한다.
  * 핸들러 코드만 람다 식을 따로 선언하거나
  * 메소드를 정의하고 메소드 참조로 가져온다
-
+```
 HandlerFunction handler = req -> {
   String res = myService.hello(req.pathVariable("name"));
   return ok().body(fromObject(res));
@@ -116,7 +116,7 @@ public class Hellohandler {
 RouterFunction helloRouter(@Autowired HelloHandler helloHandler) {
   return route(path("/hello/{name}"), helloHandler::hello);
 }
-
+```
 > RouterFunction의 조합
  * 핸들러 하나에 @Bran하나씩 만들어야하나?
  * RouterFunction의 and(), andRoute() 등으로 하나의 @Bean에 n개의 RouterFunction을 선언할 수 있다.
@@ -124,13 +124,14 @@ RouterFunction helloRouter(@Autowired HelloHandler helloHandler) {
 > RouterFucntion의 매핑 조건의 중복
  * 타입 레벨 - 메소드 레벨의 @RequestMapping처럼 공통의 조건을 정의하는 것 가능
  * RouterFunction.nest()
-
+```
  public Router(Function<?>routingFunction(){
   return nest( pathPrefix("/person")
       , nest(accept(APPLICATION_JSON)
       , route(GET("/id"), handler::getPerson).andRoute(method(HttpMethod.GET), handler::listPeople)
       ).andRoute(POST("/").and(contentType(APPLICATION_JSON)), handler::createPerson)
     );
+```
   * /person/{id} 경로의 GET이면 getPerson 핸들러로 매핑
   * /person 경로에 GET이면 listPeople 핸들러로 매핑
   * /person 경로에 POST이고 contentType이 APPLICATION_JSON이면 createPerson 핸들러로
@@ -158,7 +159,7 @@ RouterFunction helloRouter(@Autowired HelloHandler helloHandler) {
  * WebFlux의 기본 요청, 응답 인터페이스 이용
  * 함수형 WebFlux와 HandlerFunction을 메소드로 만들었을때와 유사
  * 매핑만 애노테이션 방식을 이용
- 
+``` 
  @RestController
  public static class MyController{
   @RequestMapping("/hello/{name}")
@@ -166,12 +167,12 @@ RouterFunction helloRouter(@Autowired HelloHandler helloHandler) {
     return ok().body(fromObject(req.pathVariable("name")));
   }
  }
- 
+``` 
 > @MVC 요청 바인딩과 Mono / Flux 리턴 값
  * 가장 대표적인 @MVC WebFlux 작성 방식
  * 파라미터 바인딩은 @MVC 방식 그대로
  * 핸들러 로직 코드의 결과를 Mono / Fulx 타입으로 리턴
- 
+``` 
  @GetMapping("/hello/{name}")
  Mono<String>hello(@PathVariable String name){
   return Mono.just("Hello" + name);
@@ -181,23 +182,29 @@ RouterFunction helloRouter(@Autowired HelloHandler helloHandler) {
  Mono<String>hello(User user){
   return Mono.just("Hello" + user.getName());
  }
- 
+``` 
 > @RequestBody 바인딩 (JSON, XML)
  * T
+```
  @RequestMapping("/hello")
  Mono<String>hello(@RequestBody User user){
   return Mono.just("Hello" + user.getName());
  }
+```
  * Mono<T>
+```
  @RequestMapping("/hello")
  Mono<String>hello(@RequestBody Mono<User> user){
   return user.map(u->"Hello" + u.getName());
  }
+```
  * Flux<T>
+```
  @PostMaping("/hello")
  Flux<String>hello(@RequestBody Flux<User> user){
   return user.map(u->"Hello" + u.getName());
  }
+```
  * Flux<ServerSideEvent>
  * void
  * Mono<void>
@@ -225,7 +232,7 @@ RouterFunction helloRouter(@Autowired HelloHandler helloHandler) {
  
 > Spring Data JPA의 비동기 쿼리 결과 방식
  * 리포지토리 메소드의 리턴 값을 @Async 메소드처럼 작성
- 
+```
  @Async
  CompletableFuture<User> findOneByFirstname(String firstname);
  
@@ -233,29 +240,30 @@ RouterFunction helloRouter(@Autowired HelloHandler helloHandler) {
  Mono<User>findUser(String name){
   return Mono.fromCompletionStage(myRepository.findOneByFirstname(name));
  }
-
+```
 > 본격 리액티브 데이터 엑세스 기술
  * 스프링 데이터의 리액티브 리포지토리 이용
   - MongoDB
   - Cassandra
   - Redis
  * ReavtiveCrudRepository
- 
+``` 
  public interface ReactivePersonRepository extends ReactiveCrudRepository<Person, String>{
   Flux<Person>findByLastname(Mono<String> lastname);
   @Query({'fiistname':?0, 'lastname':?1})
   Mono<Person> findByFirstnameAndLastname(String firstname, String lastname);
  }
- -----------
+```
+```
  @Autowired UserRepository userRepository
  
  @GgetMapping
  Flux<User> users(){
   return userRepository.findAll();
  }
- 
+``` 
  * 리포지토리 결과 Flux에 대해 추가 로직 적용
- 
+``` 
  public Mono<ServerResponse> getPerson(ServerRequest request) {
   int poersonId = Integer.valueOf(request.pathVariable("id"));
   Mono<ServerResponse> notFound = ServerResponse.notFound().build();
@@ -263,12 +271,12 @@ RouterFunction helloRouter(@Autowired HelloHandler helloHandler) {
   return personMono.flatMap(
     person-> ServerResponse.ok().contentType(APPLICATION_JSON).body(fromObject(person))).switchEmpty(notFound);
  }
-
+```
 > 논블록킹 API 호출은 WebClient
  * AsyncRestTemplate의 리액티브 버전
  * 요청을 Mono/Flux로 전달할 수 있고
  * 응답을 Mono/Flux형태로 가져온다
- 
+``` 
  @GetMapping("/webclient")
  Mono<String> webclient(){
   return WebClient.create("http://localhost:8080")
@@ -280,10 +288,11 @@ RouterFunction helloRouter(@Autowired HelloHandler helloHandler) {
     .map(d-> d.toUpperCase())
     .flatMap(d-> helloRepository.save(id));
  }
-
+```
 > 함수형 스타일의 코드가 읽기 어렵다면
  * 각 단계의 타입이 보이지 않기 때문이다.
  * 타입이 보이도록 코드를 재구성하고 익숙해지도록 연습이 필요하다
+```
  @GetMapping("/webclient")
  Mono<String> webclient(){
    WebClient wc = WebClient.create("http://localhost:8080");
@@ -295,7 +304,7 @@ RouterFunction helloRouter(@Autowired HelloHandler helloHandler) {
    Mono<String> upperData = data.map(d->d.toUpperCase());
    return upperData.flatMap(d-> helloRepository.save(d));
  }
- 
+``` 
  > 비동기-논블록킹 리액티브 웹 애플리케이션의 효과를 얻으려면
   * WebFlux + 리액티브 리포지토리
             + 리액티브 원격 API 호출
